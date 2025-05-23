@@ -13,7 +13,7 @@ import * as userModel from "./userModel.js"
  * @param {string} userID The ID of the user to verify.
  * @returns True if the car object is valid.
  */
-async function isValid(model: string, year: number, mileage: number, dateBought: Date, url: string, userID?: string) {
+async function isValid(model: string, year: number, mileage: number, dateBought: Date, url: string, userID?: string): Promise<boolean> {
     console.log("Model: " + model, "Year: " + year, "Mileage: " + mileage, "Date bought: " + dateBought, "URL: " + url, "UserID: " + userID)
     const minYear: number = 1990   
 
@@ -50,7 +50,7 @@ async function isValid(model: string, year: number, mileage: number, dateBought:
         throw new InvalidInputError("Model is invalid. ex: Ford Focus, BMW 3 Series, etc.");
     }
 
-  
+    return true;
 
 }
 

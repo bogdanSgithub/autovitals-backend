@@ -7,7 +7,7 @@ import app from './app.js';
 //this initiates the env variables
 import * as dotenv from 'dotenv';
 dotenv.config();
-const port = 1339;
+const port = process.env.PORT || 1339;
 const url = `${process.env.URL_PRE}${process.env.MONGODB_PWD}${process.env.URL_POST}`;
 try {
     profileModel.initialize('profile_db', false, url);

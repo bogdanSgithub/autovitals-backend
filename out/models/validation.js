@@ -41,6 +41,7 @@ async function isValid(model, year, mileage, dateBought, url, userID) {
     else {
         throw new InvalidInputError("Model is invalid. ex: Ford Focus, BMW 3 Series, etc.");
     }
+    return true;
 }
 async function validUser(username) {
     const user = await userModel.getOneUser(username);

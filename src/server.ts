@@ -11,7 +11,7 @@ import * as dotenv from 'dotenv';
 dotenv.config();
 
 
-const port: number = 1339;
+const port = process.env.PORT || 1339
 const url = `${process.env.URL_PRE}${process.env.MONGODB_PWD}${process.env.URL_POST}`
 
 

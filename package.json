@@ -33,7 +33,10 @@
     "ts-jest": "^29.2.6"
   },
   "scripts": {
-    "test": "vitest"
+    "test": "vitest",
+    "build": "tsc",
+    "start": "node out/server.js"
+
   },
   "author": "",
   "license": "ISC",
