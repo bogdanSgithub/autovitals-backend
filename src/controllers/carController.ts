@@ -1,5 +1,5 @@
 import express, { Request, Response } from 'express';
-import * as model from "../models/carModel.js"
+import * as model from "../models/carModel.js";
 import {Car} from "../models/carModel.js"
 
 import { DatabaseError } from '../models/DatabaseError.js';
