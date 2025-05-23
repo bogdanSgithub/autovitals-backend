@@ -22,7 +22,7 @@ try{
   await userModel.initialize('user_db', false, url)
 
   await app.listen(port, () => {
-    console.log(`Server running at http://localhost:${port}/`);
+    console.log(`Server running at ${process.env.FRONT_END}:${port}/`);
   })
   
 } catch (error: unknown){

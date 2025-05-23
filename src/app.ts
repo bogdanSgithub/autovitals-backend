@@ -16,7 +16,7 @@ const httpLogger = pinohttp({
 app.use(httpLogger);
 app.use(cookieParser());
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: `${process.env.FRONT_END}`,
     credentials: true
   }));
 app.use(express.json());
