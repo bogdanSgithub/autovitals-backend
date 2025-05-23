@@ -31,7 +31,7 @@ async function registerUser(request: Request, response: Response): Promise<void>
               return;
             }
             // Save cookie that will expire.
-            response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true });
+            response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true, sameSite: "none", secure: true });
             result += `successfully registered ${username}`;
             response.status(200);
             response.send(username);

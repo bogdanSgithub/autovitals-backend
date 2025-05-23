@@ -27,7 +27,7 @@ async function loginUser(request: Request, response: Response): Promise<void> {
           return;
         }
         // Save cookie that will expire.
-        response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true });
+        response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true, sameSite: "none", secure: true  });
         response.sendStatus(200);
         return;
       }
@@ -187,7 +187,7 @@ async function authenticateAdmin(request: Request, checkIsAdmin=false): Promise<
         response.clearCookie("sessionId"); // essentially the user is no longer authenticated
     } else {
         // Set the session cookie to the new id we generated, with a renewed expiration time
-        response.cookie("sessionId", newSessionId, { expires: newSession.expiresAt, httpOnly: true });
+        response.cookie("sessionId", newSessionId, { expires: newSession.expiresAt, httpOnly: true, sameSite: "none", secure: true });
     }
     return newSessionId;
 }
