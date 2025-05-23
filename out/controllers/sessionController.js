@@ -23,7 +23,7 @@ async function loginUser(request, response) {
                 return;
             }
             // Save cookie that will expire.
-            response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true });
+            response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true, sameSite: "none", secure: true });
             response.sendStatus(200);
             return;
         }
@@ -133,7 +133,7 @@ async function authenticateAdmin(request, checkIsAdmin = false) {
     // We then get the session of the user from our session map
     const userSession = getSession(sessionId);
     // we want to authenticate a user if their username is the right username in that userSession
-    if (!userSession || request.params.username != userSession.username) {
+    if (!userSession) {
         return null;
     }
     const profile = await model.getOneProfile(userSession.username);
@@ -164,7 +164,7 @@ function refreshSession(request, response) {
     }
     else {
         // Set the session cookie to the new id we generated, with a renewed expiration time
-        response.cookie("sessionId", newSessionId, { expires: newSession.expiresAt, httpOnly: true });
+        response.cookie("sessionId", newSessionId, { expires: newSession.expiresAt, httpOnly: true, sameSite: "none", secure: true });
     }
     return newSessionId;
 }

@@ -135,7 +135,7 @@ async function handleGetAllProfiles(request, response) {
         if (!authenticate(request, response, true))
             return;
         const profiles = await model.getAllProfiles();
-        result += 'Profiles found: \n';
+        result += `Profiles found: ${profiles.length}\n`;
         profiles.forEach((profile) => {
             result += `(${profile.email} ${profile.username})\n`;
         });
@@ -213,8 +213,9 @@ async function handleDeleteProfile(request, response) {
     logVisit(request, response);
     let result = "";
     const username = request.body.username;
+    const isAdminDelete = request.body.isAdminDelete;
     try {
-        if (!authenticate(request, response))
+        if (!authenticate(request, response, isAdminDelete))
             return;
         const isDeleted = await model.deleteOneProfile(username);
         if (isDeleted) {

@@ -138,8 +138,9 @@ async function handleGetAllProfiles(request: Request, response: Response): Promi
     try {
         if (!authenticate(request, response, true))
             return;
+
         const profiles = await model.getAllProfiles();
-        result += 'Profiles found: \n';
+        result += `Profiles found: ${profiles.length}\n`;
         profiles.forEach((profile: model.Profile) => {
             result += `(${profile.email} ${profile.username})\n`;
         });
@@ -219,8 +220,9 @@ async function handleDeleteProfile(request: Request, response: Response): Promis
     logVisit(request, response);
     let result: string = "";
     const username = request.body.username;
+    const isAdminDelete = request.body.isAdminDelete;
     try {
-        if (!authenticate(request, response))
+        if (!authenticate(request, response, isAdminDelete))
             return;
         const isDeleted = await model.deleteOneProfile(username);
         if (isDeleted) {

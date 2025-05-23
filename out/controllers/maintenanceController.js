@@ -1,5 +1,5 @@
 import express from 'express';
-import { addMaintenanceRecord, getOneMaintenanceRecord, getAllMaintenanceRecord, deleteOneMaintenanceRecord, updateOneMaintenanceRecord } from "../models/maintenanceRecordModel.js";
+import { addMaintenanceRecord, getOneMaintenanceRecord, getAllMaintenanceRecord, deleteOneMaintenanceRecord, updateOneMaintenanceRecord, getAllMaintenances } from "../models/maintenanceRecordModel.js";
 import logger from "../logger.js";
 const router = express.Router();
 const routeRoot = "/maintenance";
@@ -56,6 +56,22 @@ export async function handleGetOneMaintenanceRecord(req, res) {
     catch (err) {
         logger.error("Failed to fetch maintenance record:", err);
         res.status(500).json({ error: "Failed to fetch maintenance record." });
+    }
+}
+router.get('/all', handleGetAllMaintenances);
+export async function handleGetAllMaintenances(req, res) {
+    try {
+        logger.info("about to fetch all maintenance records");
+        const records = await getAllMaintenances();
+        if (!records) {
+            res.status(404).json({ error: "Maintenance records not found." });
+            return;
+        }
+        res.json(records);
+    }
+    catch (err) {
+        logger.error("Failed to fetch all maintenance records:", err);
+        res.status(500).json({ error: "Failed to fetch all maintenance records." });
     }
 }
 /**

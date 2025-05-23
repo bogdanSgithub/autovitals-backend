@@ -152,7 +152,7 @@ async function authenticateAdmin(request: Request, checkIsAdmin=false): Promise<
     const userSession = getSession(sessionId);
   
     // we want to authenticate a user if their username is the right username in that userSession
-    if (!userSession || request.params.username != userSession.username) {
+    if (!userSession) {
       return null;
     }
 

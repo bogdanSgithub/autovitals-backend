@@ -101,7 +101,24 @@ export async function getOneMaintenanceRecord(carId : string, carPart: string): 
   }
 }
 
-
+export async function getAllMaintenances(): Promise<
+  Array<MaintenanceRecord>
+> {
+  try {
+    const collection = await getMaintenanceCollection();
+    const records = (await collection.find({})).toArray();
+    logger.info(`Fetches list of records: ${records}`);
+    return records;
+  } catch (err: unknown) {
+    if (err instanceof MongoError) {
+      logger.error("❌ MongoDB error:", err.message);
+      throw new Error("Failed to insert maintenance record.");
+    } else {
+      logger.error("❌ Unexpected error:", err);
+      throw new Error("Something went wrong while adding the record.");
+    }
+  }
+}
 
 /**
  * Retrieves a list of all maintenance records from the database.
