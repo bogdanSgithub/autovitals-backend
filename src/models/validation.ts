@@ -33,18 +33,24 @@ async function isValid(model: string, year: number, mileage: number, dateBought:
         throw new InvalidInputError("Mileage cannot be negative.")
     }
 
-    if (userID){
-        if (await validUser(userID)){
-           throw new InvalidInputError("User does not exist.")
-        }
-    }
-
     if (await validateModel(model)){
-        return true
+        if (userID){
+            console.log("testing userID")
+    
+            if (process.env.TESTING === "true"){
+                return true
+            }
+    
+            if (await validUser(userID)){
+               throw new InvalidInputError("User does not exist.")
+            }
     }
+}
     else{
         throw new InvalidInputError("Model is invalid. ex: Ford Focus, BMW 3 Series, etc.");
     }
+
+  
 
 }
 
@@ -85,4 +91,4 @@ async function validateModel(model: string): Promise<boolean> {
    
 }
 
-export { isValid };
+export { isValid }

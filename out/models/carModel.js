@@ -52,8 +52,10 @@ async function initialize(dbname, resetDBFlag, url) {
  */
 async function addCar(model, year, mileage, dateBought, url, userID) {
     try {
+        console.log("trying to add car");
         if (await isValid(model, year, mileage, dateBought, url, userID)) {
-            await carsCollection?.insertOne({
+            console.log("validation passed");
+            const result = await carsCollection?.insertOne({
                 model: model,
                 year: year,
                 mileage: mileage,
@@ -61,6 +63,7 @@ async function addCar(model, year, mileage, dateBought, url, userID) {
                 url: url,
                 userID: userID
             });
+            return { _id: result?.insertedId, model: model, year: year, mileage: mileage, dateBought: dateBought, url: url, userID: userID };
         }
     }
     catch (err) {
@@ -135,6 +138,29 @@ async function getAllCarsForUser(id) {
     }
 }
 /**
+ * Gets all the car documents from the database.
+ *
+ * @returns An array containing all of the cars in the database.
+ */
+async function getAllCars() {
+    try {
+        const carCursor = carsCollection?.find({});
+        const cars = await carCursor?.toArray();
+        if (cars?.length === 0) {
+            throw new DatabaseError("Database is empty.");
+        }
+        return cars;
+    }
+    catch (err) {
+        if (err instanceof MongoError) {
+            throw new DatabaseError("An error occurred while interacting with the database: " + err.message);
+        }
+        else {
+            throw new Error("An unexpected error happened: " + err);
+        }
+    }
+}
+/**
  * Updates the first matching record matching the passed model argument.
  *
  * @param id The id of the car to update.
@@ -204,5 +230,5 @@ async function deleteCar(id) {
     }
     return id;
 }
-export { addCar, getSingleCar, getAllCarsForUser, updateCar, deleteCar, initialize };
+export { addCar, getSingleCar, getAllCarsForUser, updateCar, deleteCar, initialize, getAllCars };
 //# sourceMappingURL=carModel.js.map

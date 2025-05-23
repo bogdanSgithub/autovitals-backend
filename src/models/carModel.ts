@@ -5,13 +5,13 @@ import { InvalidInputError } from "./InvalidInputError.js";
 import { DatabaseError } from "./DatabaseError.js";
 import { isValid } from "./validation.js";
 import logger from "../logger.js";
-import { url } from "inspector";
 
 let dbName: string = "car_db";
 let client: MongoClient;
 let carsCollection: Collection<Car> | undefined;
 
 interface Car {
+  _id?: ObjectId;
   model: string;
   year: number;
   mileage: number;
@@ -70,8 +70,10 @@ async function initialize(dbname: string, resetDBFlag: boolean, url: string): Pr
  */
 async function addCar(model: string, year: number, mileage: number, dateBought: Date, url: string,  userID: string): Promise<Car> {
   try {
+    console.log("trying to add car")
     if (await isValid(model, year, mileage, dateBought, url, userID)) {
-      await carsCollection?.insertOne({
+      console.log("validation passed")
+     const result = await carsCollection?.insertOne({
         model: model, 
         year: year,
         mileage: mileage,
@@ -79,7 +81,10 @@ async function addCar(model: string, year: number, mileage: number, dateBought: 
         url: url,
         userID: userID
       });
+
+      return {_id: result?.insertedId,model: model, year: year, mileage: mileage, dateBought: dateBought, url: url, userID: userID}
     }
+
   } catch (err: unknown) {
     if (err instanceof InvalidInputError) {
       logger.error("InvalidInput error has occured!")
@@ -165,6 +170,32 @@ async function getAllCarsForUser(id: any): Promise<Array<Car> | undefined> {
 }
 
 /**
+ * Gets all the car documents from the database.
+ * 
+ * @returns An array containing all of the cars in the database.
+ */
+async function getAllCars(): Promise<Array<Car> | undefined> {
+  try {
+    const carCursor = carsCollection?.find<Car>({});
+    const cars = await carCursor?.toArray();
+
+    if (cars?.length === 0) {
+      throw new DatabaseError("Database is empty.");
+    }
+
+    return cars;
+  } catch (err: unknown) {
+    if (err instanceof MongoError) {
+      throw new DatabaseError(
+        "An error occurred while interacting with the database: " + err.message
+      );
+    } else {
+      throw new Error("An unexpected error happened: " + err);
+    }
+  }
+}
+
+/**
  * Updates the first matching record matching the passed model argument.
  *
  * @param id The id of the car to update.
@@ -241,4 +272,4 @@ async function deleteCar(id: any){
     return id
 }
 
-export {addCar, getSingleCar, getAllCarsForUser, updateCar, deleteCar, initialize, Car}
+export {addCar, getSingleCar, getAllCarsForUser, updateCar, deleteCar, initialize, Car, getAllCars}

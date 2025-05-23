@@ -1,6 +1,6 @@
 
 import { MongoMemoryServer } from "mongodb-memory-server";
-import { addCar, deleteCar, getSingleCar, initialize, updateCar } from "./models/carModel.js";
+import { addCar, deleteCar, getSingleCar, initialize, updateCar, getAllCars } from "./models/carModel.js";
 import * as model from "./models/profileModel.js"
 import { beforeEach, vi, beforeAll, test, expect, afterAll } from "vitest";
 import app from './app.js';
@@ -32,7 +32,7 @@ beforeEach(async () => {
     }
     vi.setConfig({ testTimeout: 5_000 }) 
 });
-/*
+
 test("testing add endpoint with valid input", async () => {
     //Add car to db with invalid model
     const response = await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
@@ -255,7 +255,7 @@ test("delete car with invalid match", async () => {
     expect(cars![0].year).toBe(2006)
     
 })
-*/
+
 // ****************************************************************************************************************
 // ************************************************ GET All /users ************************************************
 // ****************************************************************************************************************
