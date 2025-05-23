@@ -15,9 +15,9 @@ import * as userModel from "./userModel.js";
 async function isValid(model, year, mileage, dateBought, url, userID) {
     console.log("Model: " + model, "Year: " + year, "Mileage: " + mileage, "Date bought: " + dateBought, "URL: " + url, "UserID: " + userID);
     const minYear = 1990;
-    //if (!await isImageUrlAccessible(url)){
-    //   throw new InvalidInputError("Image URL is invalid or inaccessible.");
-    //}
+    if (!await isImageUrlAccessible(url)) {
+        throw new InvalidInputError("Image URL is invalid or inaccessible.");
+    }
     if (!model) {
         throw new InvalidInputError("Model cannot be empty.");
     }

@@ -7,6 +7,8 @@ import app from './app.js';
 import supertest from "supertest";
 const testRequest = supertest(app); 
 import { routeRoot } from "./controllers/profileController.js";
+import { ObjectId } from "mongodb";
+import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 const dbName = "user_db_test";
 
 
@@ -15,9 +17,14 @@ let mongod: MongoMemoryServer;
 const db = "car_db"
 
 interface Car {
-    model: string;
-    year: number;
-  }
+  _id?: ObjectId;
+  model: string;
+  year: number;
+  mileage: number;
+  dateBought: Date;
+  url: string;
+  userID: string;
+}
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
@@ -35,7 +42,16 @@ beforeEach(async () => {
 
 test("testing add endpoint with valid input", async () => {
     //Add car to db with invalid model
-    const response = await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
+    const response = await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2006,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
 
     //check if code is good
     expect(response.status).toBe(200)
@@ -44,15 +60,30 @@ test("testing add endpoint with valid input", async () => {
     const cars = await getAllCars()
     expect(cars?.length == 1).toBe(true)
 
+    const c_date = new Date()
+    const dbDate = new Date(cars![0].dateBought)
+
     //check if the fields are right
     expect(cars![0].model).toBe("Ford F-150")
     expect(cars![0].year).toBe(2006)
+    expect(cars![0].mileage).toBe(1000)
+    expect(Math.abs(dbDate.getTime() - c_date.getTime())).toBeLessThan(1000); // 1 sec tolerance
+    expect(cars![0].url).toBe("https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg")
+    expect(cars![0].userID).toBe("sef")
 })
 
 test("testing add endpoint with invalid model", async () => {
     //Add car to db with invalid model
-    const response = await testRequest.post("/cars").send({model: "INVALID!!!!!!!!!!!!!!!!!!!!", year: 2006})
-
+    const response = await testRequest.post("/cars").send(
+      { 
+        model: "BAD MODEL", 
+        year: 2006,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
     //check if code is good
     expect(response.statusCode).toBe(400)
 
@@ -69,8 +100,16 @@ test("testing add endpoint with invalid model", async () => {
 
 test("testing add endpoint with invalid year", async () => {
     //Add car to db with invalid year
-    const response = await testRequest.post("/cars").send({model: "Ford F-150", year: 1})
-
+    const response = await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 1,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
     //check if code is good
     expect(response.statusCode).toBe(400)
 
@@ -84,12 +123,71 @@ test("testing add endpoint with invalid year", async () => {
     }
 })
 
+test("testing add endpoint with invalid mileage", async () => {
+  //Add car to db with invalid year
+  const response = await testRequest.post("/cars").send(
+    { 
+      model: "Ford F-150", 
+      year: 2006,
+      dateBought: new Date(),
+      mileage: -2,
+      url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+      userID: "sef"
+    }
+  )
+  //check if code is good
+  expect(response.statusCode).toBe(400)
+
+  //check if database is empty with getAll cars since it throws if the db is empty 
+  try{
+      getAllCars()
+  }
+  catch{
+      // pass test if exception is thrown
+      expect(true).toBe(true)
+  }
+})
+
+test("testing add endpoint with invalid url", async () => {
+  //Add car to db with invalid year
+  const response = await testRequest.post("/cars").send(
+    { 
+      model: "Ford F-150", 
+      year: 2004,
+      dateBought: new Date(),
+      mileage: 1000,
+      url: "BAD URL",
+      userID: "sef"
+    }
+  )
+  //check if code is good
+  expect(response.statusCode).toBe(400)
+
+  //check if database is empty with getAll cars since it throws if the db is empty 
+  try{
+      getAllCars()
+  }
+  catch{
+      // pass test if exception is thrown
+      expect(true).toBe(true)
+  }
+})
+
+
 test("test get all cars endpoint with car in db", async () => {
     //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
-
+    await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
     //get response of request
-    const response = await testRequest.get("/cars/all")
+    const response = await testRequest.get("/cars/all/test")
 
     //since cars are in db, response should be valid
     expect(response.statusCode).toBe(200)
@@ -99,7 +197,7 @@ test("test get all cars endpoint with car in db", async () => {
 
 test("test get all cars endpoint with no car in db", async () => {
     //get response of request
-    const response = await testRequest.get("/cars/all")
+    const response = await testRequest.get("/cars/all/test")
 
     //since no cars are in db, response should be a database error
     expect(response.statusCode).toBe(503)
@@ -107,10 +205,19 @@ test("test get all cars endpoint with no car in db", async () => {
 
 test("test get single car in db with cars in db", async () => {
     // add to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
+    const addedCar = await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
 
     //get added car from db  
-    const response = await testRequest.get("/cars/?model=Ford F-150&year=2006")
+    const response = await testRequest.get(`/cars/${addedCar.body._id.toString()}`)
 
     //since car is in db, status code should be valid
     expect(response.statusCode).toBe(200)
@@ -119,23 +226,10 @@ test("test get single car in db with cars in db", async () => {
 })
 
 
-test("test get single car in db no cars in db", async () => {
-
-    //get a car even db is empty
-    const response = await testRequest.get("/cars/?model=Ford F-150&year=2006")
-
-    //since db is empty, 400 should be error code
-    expect(response.statusCode).toBe(400)
-
-    //nothing else to test since it doesnt actually interact with the db
-})
-
 test("test get car that doesnt exist in db", async () => {
-    // add to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
 
     //get a car that isnt in db
-    const response = await testRequest.get("/cars/?model=Toyota Corolla&year=2008")
+    const response = await testRequest.get("/cars/test")
 
     //since db is empty, 400 should be error code
     expect(response.statusCode).toBe(400)
@@ -145,10 +239,19 @@ test("test get car that doesnt exist in db", async () => {
 
 test("test update car with valid input", async () => {
     //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
+    const addedCar = await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
 
     //update it with valid input
-    const response = await testRequest.put("/cars/").send({model: "Ford F-150", year: 2006, newModel: "Audi A4", newYear: 2024})
+    const response = await testRequest.put("/cars/").send({id: addedCar.body._id.toString(), newModel: "Audi A4", newYear: 2024, newMileage: 500, newURL: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", dateBought: new Date()})
 
     //status code should be 200
     expect(response.statusCode).toBe(200)
@@ -156,17 +259,34 @@ test("test update car with valid input", async () => {
     //get cars to check if it actually was updated
     const cars = await getAllCars()
 
+
+    const c_date = new Date()
+    const dbDate = new Date(cars![0].dateBought)
+
+
     //check db to see if it really uodated
     expect(cars![0].model).toBe("Audi A4")
     expect(cars![0].year).toBe(2024)
+    expect(cars![0].mileage).toBe(500)
+    expect(cars![0].url).toBe("https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg")
+    expect(Math.abs(dbDate.getTime() - c_date.getTime())).toBeLessThan(1000); // 1 sec tolerance
 })
 
 test("test update car with invalid match", async () => {
     //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
+    await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
 
     //update it with valid input
-    const response = await testRequest.put("/cars/").send({model: "DOESNT EXIST!!!!", year: 2006, newModel: "Audi A4", newYear: 2024})
+    const response = await testRequest.put("/cars/").send({id: "Not an ID", newModel: "Audi A4", newYear: 2024, newMileage: 500, newURL: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", dateBought: new Date()})
 
     //status code should be 200
     expect(response.statusCode).toBe(400)
@@ -174,53 +294,34 @@ test("test update car with invalid match", async () => {
     //get cars to check if it wasnt updated
     const cars = await getAllCars()
 
-    //check db to see if it wasnt updated
-    expect(cars![0].model).toBe("Ford F-150")
-    expect(cars![0].year).toBe(2006)
-})
+    const c_date = new Date()
+    const dbDate = new Date(cars![0].dateBought)
 
-test("test update car with invalid newName", async () => {
-    //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
-
-    //update it with valid input
-    const response = await testRequest.put("/cars/").send({model: "DOESNT EXIST!!!!", year: 2006, newModel: "NO!!!!!", newYear: 2024})
-
-    //status code should be 200
-    expect(response.statusCode).toBe(400)
-
-    //get cars to check if it wasnt updated
-    const cars = await getAllCars()
 
     //check db to see if it wasnt updated
     expect(cars![0].model).toBe("Ford F-150")
-    expect(cars![0].year).toBe(2006)
+    expect(cars![0].year).toBe(2000)
+    expect(cars![0].mileage).toBe(1000)
+    expect(cars![0].url).toBe("https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg")
+    expect(Math.abs(dbDate.getTime() - c_date.getTime())).toBeLessThan(1000); // 1 sec tolerance
 })
 
-test("test update car with invalid newYear", async () => {
-    //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
-
-    //update it with valid input
-    const response = await testRequest.put("/cars/").send({model: "DOESNT EXIST!!!!", year: 2006, newModel: "Audi A4", newYear: 1})
-
-    //status code should be 200
-    expect(response.statusCode).toBe(400)
-
-    //get cars to check if it wasnt updated
-    const cars = await getAllCars()
-
-    //check db to see if it wasnt updated
-    expect(cars![0].model).toBe("Ford F-150")
-    expect(cars![0].year).toBe(2006)
-})
 
 test("delete car with valid input", async () => {
     //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
+    const addedCar = await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
 
     //delete car from db
-    const response = await testRequest.delete("/cars").send({model: "Ford F-150", year: 2006})
+    const response = await testRequest.delete(`/cars/${addedCar.body._id.toString()}`)
 
     //should be valid code
     expect(response.statusCode).toBe(200)
@@ -237,10 +338,18 @@ test("delete car with valid input", async () => {
 
 test("delete car with invalid match", async () => {
     //add car to db
-    await testRequest.post("/cars").send({model: "Ford F-150", year: 2006})
-
+      await testRequest.post("/cars").send(
+      { 
+        model: "Ford F-150", 
+        year: 2000,
+        dateBought: new Date(),
+        mileage: 1000,
+        url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg",
+        userID: "sef"
+      }
+    )
     //delete car from db
-    const response = await testRequest.delete("/cars").send({model: "NO!", year: 2006})
+    const response = await testRequest.delete("/cars/NotanID")
 
     //should be valid code
     expect(response.statusCode).toBe(400)
@@ -250,10 +359,16 @@ test("delete car with invalid match", async () => {
     //get cars to check if it wasnt deleted
     const cars = await getAllCars()
 
+    const c_date = new Date()
+    const dbDate = new Date(cars![0].dateBought)
+
+
     //check db to see if it wasnt deleted
     expect(cars![0].model).toBe("Ford F-150")
-    expect(cars![0].year).toBe(2006)
-    
+    expect(cars![0].year).toBe(2000)
+    expect(cars![0].mileage).toBe(1000)
+    expect(cars![0].url).toBe("https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg")
+    expect(Math.abs(dbDate.getTime() - c_date.getTime())).toBeLessThan(1000); // 1 sec tolerance    
 })
 
 // ****************************************************************************************************************

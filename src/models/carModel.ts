@@ -111,6 +111,11 @@ async function getSingleCar(id: string): Promise<Car | undefined> {
     if (!carsCollection) {
       throw new DatabaseError("collection not initialized");
     }
+
+    if (!ObjectId.isValid(id)) {
+      throw new InvalidInputError("Invalid ID format: " + id);
+    }
+
     const car = await carsCollection.findOne<Car>({_id: new ObjectId(id)});
 
     if (car === null) {
@@ -248,6 +253,10 @@ async function updateCar(id: any, newModel: string, newYear: number, newMileage:
  */
 async function deleteCar(id: any){
     try {
+      if (!ObjectId.isValid(id)) {
+        throw new InvalidInputError("Invalid ID format: " + id);
+      }  
+
         await getSingleCar(id)
         await carsCollection?.deleteOne(
           {_id: new ObjectId(id)});

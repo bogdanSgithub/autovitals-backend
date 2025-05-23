@@ -17,9 +17,9 @@ async function isValid(model: string, year: number, mileage: number, dateBought:
     console.log("Model: " + model, "Year: " + year, "Mileage: " + mileage, "Date bought: " + dateBought, "URL: " + url, "UserID: " + userID)
     const minYear: number = 1990   
 
-    //if (!await isImageUrlAccessible(url)){
-    //   throw new InvalidInputError("Image URL is invalid or inaccessible.");
-    //}
+    if (!await isImageUrlAccessible(url)){
+       throw new InvalidInputError("Image URL is invalid or inaccessible.");
+    }
 
     if (!model) {
         throw new InvalidInputError("Model cannot be empty.");

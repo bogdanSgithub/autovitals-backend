@@ -2,7 +2,6 @@
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { addCar, deleteCar, getAllCars, getSingleCar, initialize, updateCar } from "./carModel.js";
 import { beforeEach, vi, beforeAll, test, expect, afterAll } from "vitest";
-import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 
 let mongod: MongoMemoryServer;
 const db = "car_db"
@@ -58,12 +57,7 @@ test("adding multiple valid cars to database", async () => {
     expect(cars![1].model == testCar2.model && cars![1].year == testCar2.year && cars![1].mileage == testCar2.mileage && cars![1].dateBought.getTime() == testCar2.dateBought.getTime() && cars![1].userID == testCar2.userID && cars![1].url == testCar2.url).toBe(true)
 })
 
-test("adding car with invalid model", async () => {
-    const testCar: Car = {model: "Civiv not Honda", year: 2006, mileage: 2, dateBought: new Date(), url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", userID: "sef"}
-    expect(async () => {
-        await addCar(testCar.model, testCar.year, testCar.mileage, testCar.dateBought, testCar.url, testCar.userID);
-    }).rejects.toThrow();
-})
+
 
 test("adding car with invalid year", async () => {
     const testCar: Car = {model: "Honda Civic", year: 1989, mileage: 2, dateBought: new Date(), url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", userID: "sef"} //this also tests the edge case
@@ -71,6 +65,29 @@ test("adding car with invalid year", async () => {
         await addCar(testCar.model, testCar.year, testCar.mileage, testCar.dateBought, testCar.url, testCar.userID);
     }).rejects.toThrow();
 })
+
+test("adding car with invalid mileage", async () => {
+    const testCar: Car = {model: "Honda Civic", year: 1989, mileage: -2, dateBought: new Date(), url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", userID: "sef"} //this also tests the edge case
+    expect(async () => {
+        await addCar(testCar.model, testCar.year, testCar.mileage, testCar.dateBought, testCar.url, testCar.userID);
+    }).rejects.toThrow();
+})
+
+test("adding car with invalid url", async () => {
+    const testCar: Car = {model: "Honda Civic", year: 1989, mileage: 2, dateBought: new Date(), url: "not a url", userID: "sef"} //this also tests the edge case
+    expect(async () => {
+        await addCar(testCar.model, testCar.year, testCar.mileage, testCar.dateBought, testCar.url, testCar.userID);
+    }).rejects.toThrow();
+})
+
+test("adding car with invalid model", async () => {
+    const testCar: Car = {model: "", year: 1989, mileage: 2, dateBought: new Date(), url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", userID: "sef"} //this also tests the edge case
+    expect(async () => {
+        await addCar(testCar.model, testCar.year, testCar.mileage, testCar.dateBought, testCar.url, testCar.userID);
+    }).rejects.toThrow();
+})
+
+
 
 test("reading single car from db", async () => {
     const testCar: Car = {model: "Honda Civic", year: 2006, mileage: 2, dateBought: new Date(), url: "https://img.sm360.ca/ir/w640/images/newcar/ca/2025/honda/civic-berline-hybride/sport/sedan/2025_honda_civic-sedan-hybride_sport_photos_002.jpg", userID: "sef"}

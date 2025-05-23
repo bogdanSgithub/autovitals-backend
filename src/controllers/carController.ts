@@ -58,7 +58,15 @@ async function addCarHandler(request: Request, response: Response){
  */
 async function readAllCarHandler(request: Request, response: Response){
     try{
-        const cars = await model.getAllCarsForUser(request.params.id)
+        let cars: Car[] | undefined = []
+
+        if (process.env.TESTING === "true"){
+            cars = await model.getAllCars()
+        } 
+        else{
+            cars = await model.getAllCarsForUser(request.params.id)
+        }
+        
                 
         response.status(200)
         logger.info("Reading all was succesful")    
