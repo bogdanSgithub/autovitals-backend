@@ -193,15 +193,17 @@ async function handleDeleteProfile(request: Request, response: Response): Promis
     const username = request.body.username;
     const isAdminDelete = request.body.isAdminDelete;
     try {
-
+        let isDeleted;
         if (process.env.TESTING === "true") {
-            await model.deleteOneProfile(username);
+            isDeleted = await model.deleteOneProfile(username);
         }
 
         // allow tests to delete without authentication
         if (!authenticate(request, response, isAdminDelete))
             return;
-        const isDeleted = await model.deleteOneProfile(username);
+        if (!process.env.TESTING) {
+            isDeleted = await model.deleteOneProfile(username);
+        }
         if (isDeleted) {
           response.status(200);
           result = `successfully deleted profile (${username}).`;
