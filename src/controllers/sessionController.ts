@@ -159,7 +159,7 @@ async function authenticateAdmin(request: Request, checkIsAdmin=false): Promise<
     }
 
     const profile = await model.getOneProfile(userSession.username);
-    if (!profile.isAdmin) {
+    if (!profile?.isAdmin) {
       return null;
     }
 

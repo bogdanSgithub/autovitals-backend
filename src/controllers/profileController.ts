@@ -68,7 +68,7 @@ async function handleGetOneProfile(request: Request, response: Response): Promis
         if (!authenticate(request, response))
             return;
         const profile = await model.getOneProfile(request.params.username);
-        result = `successfully found user (${profile.username})`;
+        result = `successfully found user (${profile?.username})`;
         response.status(200);
         response.send(profile);
         logger.info(result);
@@ -105,9 +105,8 @@ router.get("/profiles/", handleGetAllProfiles);
 async function handleGetAllProfiles(request: Request, response: Response): Promise<void> {
     logVisit(request, response);
     let result: string = "";
-    const profile = await model.getOneProfile(request.body.username);
     try {
-        if (!authenticate(request, response, profile.isAdmin))
+        if (!authenticate(request, response, true))
             return;
 
         const profiles = await model.getAllProfiles();
@@ -121,7 +120,14 @@ async function handleGetAllProfiles(request: Request, response: Response): Promi
         logger.info(result);
     }
     catch (err: unknown) {
-        if (err instanceof DatabaseError) {
+        if (err instanceof InvalidInputError) {
+            response.status(500);
+            result = `input error ${err.message}`
+            response.send(result);
+            logger.error(result);
+        }
+
+        else if (err instanceof DatabaseError) {
             response.status(500);
             result = `database error ${err.message}`
             response.send(result);
