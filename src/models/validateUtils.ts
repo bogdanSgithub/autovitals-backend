@@ -1,5 +1,6 @@
 import validator from "validator";
 import * as userModel from "./userModel.js";
+import { InvalidInputError } from "./InvalidInputError.js";
 
 /**
  * Check to see if the given first name and last name are non-empty and comprised of 
@@ -22,7 +23,7 @@ async function isValidProfile(email: string, username: string, emailReminderPref
     return false;
   }
   if (!email || email === "" || !validator.isEmail(email) || !user || !emailReminderPreference ) {
-    return false
+    throw new InvalidInputError("Invalid email")
   }
   return true;
 }

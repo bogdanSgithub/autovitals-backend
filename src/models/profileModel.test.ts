@@ -1,17 +1,21 @@
 // Bogdan
-import { MongoError, Db, MongoClient, Collection, Document } from "mongodb";
-import * as validateUtils from "./validateUtils";
-import { DatabaseError } from "./DatabaseError";
 import { InvalidInputError } from "./InvalidInputError";
 import * as model from "./profileModel";
+import * as userModel from "./userModel";
 import { EmailReminderPreference } from "./profileModel";
 import { MongoMemoryServer } from "mongodb-memory-server";
 let mongod : MongoMemoryServer;
 
 const dbName = "profiles_db_test";
+const userDbName = "users_db_test";
 
-function generateUserData(): model.Profile {
-    return {email: "Bob@gmail.com", username: "1", isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"};
+function generateProfileData(username: string): model.Profile {
+    return {email: "Bob@gmail.com", username: username, isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"};
+}
+
+const strongPassword = "Abc123!@"
+function generateUserData(): userModel.User {
+    return {username: "1", password: strongPassword};
 }
 
 /**
@@ -25,26 +29,28 @@ beforeAll(async () => {
   
 
 /**
- * called before each test. Re initializes the databse that way there is no dependency between the tests and we know what we are starting with.
+ * called before each test. Re initializes the database that way there is no dependency between the tests and we know what we are starting with.
  */
 beforeEach(async () => {
-    const url : string = mongod.getUri();
+    const url: string = mongod.getUri();
     try {
-         await model.initialize(dbName, true, url);
+        await model.initialize(dbName, true, url);
+        await userModel.initialize(userDbName, true, url); // ADD THIS LINE
     } catch (err: unknown) {
         if (err instanceof Error) {
-          console.log(err.message);
+            console.log(err.message);
         } else {
-          console.log("An unknown error occurred.");
+            console.log("An unknown error occurred.");
         }
-     }
-  });
+    }
+});
 
   /**
    * Called after each test. Closes the connection to mongodb.
    */
 afterEach(async () => {
     await model.close()
+    await userModel.close()
 });
 
 /**
@@ -59,349 +65,211 @@ afterAll(async () => {
  * Test to see if you can add a user to db. Really an integration test. We call addUser then we fetch the collection to make sure
  * it added the correct user. Database is empty beforehand.
  */
-test('Can add User to collection', async () => {
-    const newUser : model.Profile = generateUserData();
-    await model.addProfile(newUser.email, newUser.isAdmin, newUser.username, newUser.coordinates, newUser.emailReminderPreference);
+test('Success Add Profile', async () => {
+    const newUser = generateUserData(); // creates a { username, password }
+    await userModel.addUser(newUser.username, newUser.password);
+
+    const newProfile: model.Profile = generateProfileData(newUser.username);
+    await model.addProfile(
+        newProfile.email,
+        newProfile.isAdmin,
+        newProfile.username,
+        newProfile.coordinates,
+        newProfile.emailReminderPreference
+    );
+
     const cursor = await model.getCollection().find();
     const results = await cursor.toArray();
     expect(Array.isArray(results)).toBe(true);
     expect(results.length).toBe(1);
-    expect(results[0].email.toLowerCase() == newUser.email.toLowerCase()).toBe(true);
-    expect(results[0].emailReminderPreference.toLowerCase() == newUser.emailReminderPreference.toLowerCase()).toBe(true);
+    expect(results[0].username).toBe(newProfile.username);
+    expect(results[0].email).toBe(newProfile.email);
+    expect(results[0].isAdmin).toBe(newProfile.isAdmin);
+    expect(results[0].coordinates).toEqual(newProfile.coordinates);
+    expect(results[0].emailReminderPreference).toBe(newProfile.emailReminderPreference);
 });
 
-/**
- * Same as last test but now the colleciton is not empty beforehand.
- */
-/*
-test('Can add User to collection that is not empty', async () => {
-    await model.addProfile("ValidUser", "ValidLastName");
 
-    const newUser : model.Profile = generateUserData();
-    await model.addProfile(newUser.firstName, newUser.lastName);
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(2);
-    expect(results[1].firstName.toLowerCase() == newUser.firstName.toLowerCase()).toBe(true);
-    expect(results[1].lastName.toLowerCase() == newUser.lastName.toLowerCase()).toBe(true);
-});
-*/
 /**
  * Makes sure that we get an InvalidInputError when we try to add an invalid user.
  */
-/*
-test('Cannot add invalid User to collection', async () => {
-    const invalidUser : model.User = {firstName: "123", lastName: "123"};
-    let errorCaught = false;
-    try {
-      await model.addUser(invalidUser.firstName, invalidUser.lastName);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
+test('Fail Add Profile Non-existent User', async () => {
+    const invalidProfile = generateProfileData("nonexistentUser");
 
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(0);
-});*/
+    await expect(
+        model.addProfile(
+            invalidProfile.email,
+            invalidProfile.isAdmin,
+            invalidProfile.username,
+            invalidProfile.coordinates,
+            invalidProfile.emailReminderPreference
+        )
+    ).rejects.toThrow(InvalidInputError);
+});
 
-/**
- * Test to check that we can get a user by firstname and lastname. That is the only user in the collection.
- */
-/*
-test('Can read User from collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const actualUser = await model.getOneUser(user.firstName);
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
+test('Fail Add Profile with Invalid Email Format', async () => {
+    const user = generateUserData();
+    await userModel.addUser(user.username, user.password);
 
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-    expect(results[0].firstName.toLowerCase() == actualUser.firstName.toLowerCase()).toBe(true);
-    expect(results[0].lastName.toLowerCase() == actualUser.lastName.toLowerCase()).toBe(true);
-});*/
+    await expect(model.addProfile(
+        "not-an-email",
+        false,
+        user.username,
+        [10, 10],
+        "none"
+    )).rejects.toThrow(InvalidInputError);
+});
 
-/**
- * Same as above but there is another document in the collection
- */
-/*
-test('Can read User from collection with 2 documents', async () => {
-    await model.addUser("ValidUser", "ValidLastName");
+test('Fail Add Profile with Missing Username', async () => {
+    await expect(model.addProfile(
+        "bob@gmail.com",
+        false,
+        "", // Missing username
+        [10, 10],
+        "none"
+    )).rejects.toThrow(InvalidInputError);
+});
 
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const actualUser = await model.getOneUser(user.firstName);
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
+test('Success getOneProfile returns profile by username', async () => {
+    const user = generateUserData();
+    await userModel.addUser(user.username, user.password);
 
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(2);
-    expect(results[1].firstName.toLowerCase() == actualUser.firstName.toLowerCase()).toBe(true);
-    expect(results[1].lastName.toLowerCase() == actualUser.lastName.toLowerCase()).toBe(true);
-});*/
+    const profile = generateProfileData(user.username);
+    await model.addProfile(
+        profile.email,
+        profile.isAdmin,
+        profile.username,
+        profile.coordinates,
+        profile.emailReminderPreference
+    );
 
-/**
- * Tests to check that we get a Database Error when trying to get a user from empty collection
- */
-/*
-test('InvalidInputError if read from empty collection', async () => {
-    const user : model.User = generateUserData();
-    let errorCaught = false;
-    try {
-        await model.getOneUser(user.firstName);
-      } catch (error) {
-        errorCaught = true;
-        expect(error).toBeInstanceOf(InvalidInputError);
-      }
-      expect(errorCaught).toBe(true);
+    const fetchedProfile = await model.getOneProfile(user.username);
+    expect(fetchedProfile).toBeDefined();
+    expect(fetchedProfile.username).toBe(user.username);
+    expect(fetchedProfile.email).toBe(profile.email);
+});
 
-      const cursor = await model.getCollection().find();
-      const results = await cursor.toArray();
-      expect(Array.isArray(results)).toBe(true);
-      expect(results.length).toBe(0);
-});*/
+test('Fail getOneProfile when profile does not exist', async () => {
+    await expect(model.getOneProfile("nonexistentuser")).rejects.toThrow(InvalidInputError);
+});
 
-/**
- * Tests to check that we can read all users in collection. Only 1 document in collection.
- */
-/*
-test('Can read Users from collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const users = await model.getAllUsers();
-    expect(Array.isArray(users)).toBe(true);
-    expect(users.length).toBe(1);
-    expect(users[0].firstName.toLowerCase() == user.firstName.toLowerCase()).toBe(true);
-    expect(users[0].lastName.toLowerCase() == user.lastName.toLowerCase()).toBe(true);
-});*/
+test('Success getAllProfiles returns all profiles', async () => {
+    // Add two users and profiles
+    const user1 = generateUserData();
+    await userModel.addUser(user1.username, user1.password);
+    const profile1 = generateProfileData(user1.username);
+    await model.addProfile(
+        profile1.email,
+        profile1.isAdmin,
+        profile1.username,
+        profile1.coordinates,
+        profile1.emailReminderPreference
+    );
 
-/**
- * Same as above but now there are 2 documents in collection.
- */
-/*
-test('Can read Users from collection of 2 documents', async () => {
-    await model.addUser("Valid", "Valid");
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const users = await model.getAllUsers();
+    await userModel.addUser("user2", strongPassword);
+    const profile2 = generateProfileData("user2");
+    await model.addProfile(
+        profile2.email,
+        profile2.isAdmin,
+        profile2.username,
+        profile2.coordinates,
+        profile2.emailReminderPreference
+    );
 
-    expect(Array.isArray(users)).toBe(true);
-    expect(users.length).toBe(2);
-    expect(users[0].firstName.toLowerCase() == "Valid".toLowerCase()).toBe(true);
-    expect(users[0].lastName.toLowerCase() == "Valid".toLowerCase()).toBe(true);
-    expect(users[1].firstName.toLowerCase() == user.firstName.toLowerCase()).toBe(true);
-    expect(users[1].lastName.toLowerCase() == user.lastName.toLowerCase()).toBe(true);
-});*/
+    const profiles = await model.getAllProfiles();
+    expect(Array.isArray(profiles)).toBe(true);
+    expect(profiles.length).toBe(2);
 
-/**
- * Read all from empty collection. Technically should not be an error. Makes sure it's an empty collection.
- */
-/*
-test('Read all from empty collection', async () => {
-    const users = await model.getAllUsers();
-    expect(Array.isArray(users)).toBe(true);
+    const usernames = profiles.map(p => p.username);
+    expect(usernames).toContain(user1.username);
+    expect(usernames).toContain("user2");
+});
+
+test('getAllProfiles returns empty array when no profiles', async () => {
+    const profiles = await model.getAllProfiles();
+    expect(Array.isArray(profiles)).toBe(true);
+    expect(profiles.length).toBe(0);
+});
+
+test('Success updateOneProfile updates an existing profile', async () => {
+    const user = generateUserData();
+    await userModel.addUser(user.username, user.password);
+    const profile = generateProfileData(user.username);
+    await model.addProfile(
+        profile.email,
+        profile.isAdmin,
+        profile.username,
+        profile.coordinates,
+        profile.emailReminderPreference
+    );
+
+    const updatedProfile = {
+        ...profile,
+        email: "newemail@example.com",
+        emailReminderPreference: "daily" as EmailReminderPreference,
+    };
+
+    const result = await model.updateOneProfile(profile.username, updatedProfile);
+    expect(result.email).toBe(updatedProfile.email);
+    expect(result.emailReminderPreference).toBe(updatedProfile.emailReminderPreference);
+
+    const stored = await model.getOneProfile(profile.username);
+    expect(stored.email).toBe(updatedProfile.email);
+    expect(stored.emailReminderPreference).toBe(updatedProfile.emailReminderPreference);
+});
+
+test('Fail updateOneProfile throws InvalidInputError for invalid profile data', async () => {
+    const user = generateUserData();
+    await userModel.addUser(user.username, user.password);
+    const profile = generateProfileData(user.username);
+    await model.addProfile(
+        profile.email,
+        profile.isAdmin,
+        profile.username,
+        profile.coordinates,
+        profile.emailReminderPreference
+    );
+
+    const invalidProfile = {
+        ...profile,
+        email: "invalid-email",  // invalid email
+    };
+
+    await expect(model.updateOneProfile(profile.username, invalidProfile)).rejects.toThrow(InvalidInputError);
+});
+
+test('Success deleteOneProfile deletes existing profile and user', async () => {
+    const user = generateUserData();
+    await userModel.addUser(user.username, user.password);
+    const profile = generateProfileData(user.username);
+    await model.addProfile(
+        profile.email,
+        profile.isAdmin,
+        profile.username,
+        profile.coordinates,
+        profile.emailReminderPreference
+    );
+
+    const result = await model.deleteOneProfile(user.username);
+    expect(result).toBe(true);
+
+    // profile deleted
+    const profiles = await model.getAllProfiles();
+    expect(profiles.find(p => p.username === user.username)).toBeUndefined();
+
+    // user deleted
+    const usersCursor = await userModel.getCollection().find({ username: user.username });
+    const users = await usersCursor.toArray();
     expect(users.length).toBe(0);
-});*/
+});
 
-/**
- * Tests to check that we can update a user in the collection. This is the only document in the collection.
- */
-/*
-test('Can update User in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const newUser = await model.updateOneUser(user.firstName, user.lastName, {firstName: "Valid", lastName: "Valid"});
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-    expect(results[0].firstName.toLowerCase() == newUser.firstName.toLowerCase()).toBe(true);
-    expect(results[0].lastName.toLowerCase() == newUser.lastName.toLowerCase()).toBe(true);
-});*/
+test('Fail deleteOneProfile throws InvalidInputError invalid username', async () => {
+    await expect(model.deleteOneProfile("invalid-username")).rejects.toThrow(InvalidInputError);
+});
 
-/**
- * Same as above but now there are 2 documents in collection.
- */
-/*
-test('Can update User in collection of multiple documents', async () => {
-    await model.addUser("ValidUser", "ValidLastName");
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const newUser = await model.updateOneUser(user.firstName, user.lastName, {firstName: "Valid", lastName: "Valid"});
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(2);
-    expect(results[1].firstName.toLowerCase() == newUser.firstName.toLowerCase()).toBe(true);
-    expect(results[1].lastName.toLowerCase() == newUser.lastName.toLowerCase()).toBe(true);
-});*/
+test('Fail deleteOneProfile throws InvalidInputError not existing profile', async () => {
+    const user = generateUserData();
+    // Note: user not added to DB
 
-/**
- * Makes sure it throws an InvalidInputError when trying to update a user to something that is invalid.
- */
-/*
-test('Cannot update invalid User in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const invalidUser : model.User = {firstName: "123", lastName: "123"};
-    let errorCaught = false;
-    try {
-      await model.updateOneUser(user.firstName, user.lastName, invalidUser);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-});*/
-
-/**
- * Makes sure to throw DatabaseError when trying to update a user that is an empty collection.
- */
-/*
-test('Cannot update User that is not in empty collection', async () => {
-    const user : model.User = generateUserData();
-    let errorCaught = false;
-    try {
-      await model.updateOneUser(user.firstName, user.lastName, user);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(0);
-});*/
-
-/**
- * Same as above but now collection is not empty
- */
-/*
-test('Cannot update User that is not in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const invalidUser : model.User = {firstName: "123", lastName: "123"};
-    let errorCaught = false;
-    try {
-      await model.updateOneUser("NotInDb", "NotInDb", user);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-});*/
-
-/**
- * Tests to check that we can delete user from collection. Only 1 document in the collection.
- */
-/*
-test('Can delete User in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const result = await model.deleteOneUser(user.firstName, user.lastName);
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(result).toBe(true);
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(0);
-});*/
-
-/**
- * Same as above but now 2 documents in collection.
- */
-/*
-test('Can delete User in collection of multiple documents', async () => {
-    await model.addUser("ValidUser", "ValidLastName");
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const result = await model.deleteOneUser(user.firstName, user.lastName);
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(result).toBe(true);
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-    expect(results[0].firstName.toLowerCase() == "ValidUser".toLowerCase()).toBe(true);
-    expect(results[0].lastName.toLowerCase() == "ValidLastName".toLowerCase()).toBe(true);
-});*/
-
-/**
- * Tests that it throws an invalid input error when trying to delete an invalid user.
- */
-/*
-test('Cannot delete invalid User in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    const invalidUser : model.User = {firstName: "123", lastName: "123"};
-    let errorCaught = false;
-    try {
-      await model.deleteOneUser(invalidUser.firstName, invalidUser.lastName);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-});*/
-
-/**
- * Throws a database error when trying to delete user from empty collection
- */
-/*
-test('Cannot delete User of empty collection', async () => {
-    const user : model.User = generateUserData();
-    let errorCaught = false;
-    try {
-      await model.deleteOneUser(user.firstName, user.lastName);
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(0);
-});*/
-
-/**
- * same as above but collection is not empty
- */
-/*
-test('Cannot delete User that is not in collection', async () => {
-    const user : model.User = generateUserData();
-    await model.addUser(user.firstName, user.lastName);
-    let errorCaught = false;
-    try {
-      await model.deleteOneUser("NotInDb", "NotInDb");
-    } catch (error) {
-      errorCaught = true;
-      expect(error).toBeInstanceOf(InvalidInputError);
-    }
-    expect(errorCaught).toBe(true);
-
-    const cursor = await model.getCollection().find();
-    const results = await cursor.toArray();
-    expect(Array.isArray(results)).toBe(true);
-    expect(results.length).toBe(1);
-});*/
+    await expect(model.deleteOneProfile(user.username)).rejects.toThrow(InvalidInputError);
+});

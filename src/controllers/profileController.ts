@@ -190,7 +190,7 @@ async function handleUpdateProfile(request: Request, response: Response): Promis
     catch (err: unknown) {
         if (err instanceof InvalidInputError) {
             response.status(400);
-            result = `unsuccessful to update profile, invalid input ${err.message}`;
+            result = `unsuccessful to update profile ${err.message}`;
             response.send(result);
             logger.error(result);
         }
@@ -251,7 +251,7 @@ async function handleDeleteProfile(request: Request, response: Response): Promis
         }
         else if (err instanceof DatabaseError) {
             response.status(500);
-            result = `unsuccessful to delete profile (${username}). something weird happened  ${err.message}`;
+            result = `unsuccessful to delete profile (${username}). ${err.message}`;
             response.send(result);
             logger.error(result);
         }

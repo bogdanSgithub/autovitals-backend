@@ -7,44 +7,48 @@ import { Session, createSession, getSession, deleteSession } from "./Session.js"
 import { checkCredentials } from '../models/userModel.js';
 import * as model from "../models/profileModel.js";
 
-const numMinutes = 20;
+// i couldnt get the refreshSession to work properly so instead i made the cookie last 30 minutes...
+const numMinutes = 30;
 
 router.post("/login", loginUser);
 /** Log a user in and create a session cookie that will expire in 2 minutes */
 async function loginUser(request: Request, response: Response): Promise<void> {
-    const username: string = request.body.username;
-    const password: string = request.body.password;
-    try {
-      if (username && password && await checkCredentials(username, password)) {
-        logger.info("Successful login for " + username);
-        
-        // Create a session object that will expire in 2 minutes
-        const sessionId: string = createSession(username, numMinutes);
-      
-        const session = getSession(sessionId);
-        if (!session) {
-          response.sendStatus(500);
-          return;
-        }
-        // Save cookie that will expire.
-        response.cookie("sessionId", sessionId, { expires: session.expiresAt, httpOnly: true, sameSite: "none", secure: true  });
-        response.sendStatus(200);
+  const username: string = request.body.username;
+  const password: string = request.body.password;
+
+  try {
+    if (username && password && await checkCredentials(username, password)) {
+      logger.info("Successful login for " + username);
+
+      const sessionId: string = createSession(username, numMinutes);
+      const session = getSession(sessionId);
+      if (!session) {
+        response.sendStatus(500);
         return;
       }
-      else {
-        logger.warn("Unsuccessful login for " + username);
-      }
+
+      response.cookie("sessionId", sessionId, {
+        expires: session.expiresAt,
+        httpOnly: true,
+        sameSite: "none",
+        secure: true
+      });
+
+      response.sendStatus(200);
+      return;
+    } else {
+      logger.warn("Unsuccessful login for " + username);
+      response.sendStatus(401); // move this inside the else block
+      return;
     }
-    catch (err: unknown) {
-      if (err instanceof Error) {
-        response.status(400);
-        let result = `An unexpected error occurred ${err}`;
-        response.send(result);
-        logger.error(result);
-      }
+  } catch (err: unknown) {
+    if (err instanceof Error) {
+      const result = `An unexpected error occurred: ${err.message}`;
+      logger.error(result);
     }
-    response.sendStatus(401);
+    response.sendStatus(500);
   }
+}
 
 router.get('/logout', logoutUser);
 function logoutUser(request: Request, response: Response): void {
@@ -68,13 +72,11 @@ function logoutUser(request: Request, response: Response): void {
 router.get("/auth", authUser);
 async function authUser(request: Request, response: Response): Promise<void> {
   try {
-    console.log("hello?");
+    console.log("AUTHENTICATION CALLED?");
     const authenticatedSession = authenticateUser(request);
     if (!authenticatedSession) {
-      console.log(`problem Cookies: ${JSON.stringify(request.cookies)}`);
       response.sendStatus(401);
     } else {
-      console.log(`yes Cookies: ${JSON.stringify(request.cookies)}`);
       response.status(200).send(authenticatedSession.userSession.username);
     }
   } catch (error) {
