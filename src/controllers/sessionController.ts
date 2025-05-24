@@ -178,6 +178,7 @@ async function authenticateAdmin(request: Request, checkIsAdmin=false): Promise<
         response.sendStatus(401); // Unauthorized access
         return;
     }
+
     // Create and store a new Session object that will expire in 2 minutes.
     const newSessionId: string = createSession(authenticatedUser.userSession.username, numMinutes);
     // Delete the old entry in the session map

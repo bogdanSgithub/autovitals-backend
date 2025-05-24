@@ -10,36 +10,6 @@ import { authenticate } from "./sessionController.js";
 import { sendEmail } from "../scripts/emailSender.js";
 import { logVisit } from "../scripts/loggerHelper.js";
 
-router.post('/profiles/emailReminder', handleEmailReminder);
-async function handleEmailReminder(request: Request, response: Response): Promise<void> {
-    let result: string = "";
-    try {
-        if (!authenticate(request, response))
-            return;
-        sendEmail(request.body.email, request.body.subject, request.body.html);
-    }
-    catch (err: unknown) {
-        if (err instanceof InvalidInputError) {
-            response.status(400);
-            result = `unsuccessful to send email reminder, invalid input ${err.message}`
-            response.send(result);
-            logger.error(result);
-        }
-        if (err instanceof Error) {
-            response.status(400);
-            result = `unsuccessful to send email reminder: ${err.message}`
-            response.send(result);
-            logger.error(result);
-        }
-        else {
-            response.status(500);
-            result = `An unexpected error occurred ${err}`;
-            response.send(result);
-            logger.fatal(result);
-        }
-    }
-}
-
 router.post('/profiles', handleAddProfile);
 /**
  * Creates a new user by the given firstName and lastName through the body in the request. It calls the addUser method of the model.
@@ -135,8 +105,9 @@ router.get("/profiles/", handleGetAllProfiles);
 async function handleGetAllProfiles(request: Request, response: Response): Promise<void> {
     logVisit(request, response);
     let result: string = "";
+    const profile = await model.getOneProfile(request.body.username);
     try {
-        if (!authenticate(request, response, true))
+        if (!authenticate(request, response, profile.isAdmin))
             return;
 
         const profiles = await model.getAllProfiles();
@@ -257,5 +228,37 @@ async function handleDeleteProfile(request: Request, response: Response): Promis
         }
     }
 }
+
+/*
+router.post('/profiles/emailReminder', handleEmailReminder);
+async function handleEmailReminder(request: Request, response: Response): Promise<void> {
+    let result: string = "";
+    try {
+        if (!authenticate(request, response))
+            return;
+        sendEmail(request.body.email, request.body.subject, request.body.html);
+    }
+    catch (err: unknown) {
+        if (err instanceof InvalidInputError) {
+            response.status(400);
+            result = `unsuccessful to send email reminder, invalid input ${err.message}`
+            response.send(result);
+            logger.error(result);
+        }
+        if (err instanceof Error) {
+            response.status(400);
+            result = `unsuccessful to send email reminder: ${err.message}`
+            response.send(result);
+            logger.error(result);
+        }
+        else {
+            response.status(500);
+            result = `An unexpected error occurred ${err}`;
+            response.send(result);
+            logger.fatal(result);
+        }
+    }
+}
+*/
 
 export {router, routeRoot};
