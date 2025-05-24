@@ -84,7 +84,7 @@ async function close() {
  */
 async function addProfile(email: string, isAdmin: boolean, username: string, coordinates: Array<number>, emailReminderPreference: EmailReminderPreference): Promise<Profile>{
     if (! (await validateUtils.isValidProfile(email, username, emailReminderPreference))) {
-        throw new InvalidInputError(`Not a valid Profile with email: ${email}, emailReminderPreferenceL ${emailReminderPreference}`);
+        throw new InvalidInputError(`Not a valid Profile with email: ${email}, emailReminderPreference ${emailReminderPreference}`);
     }
     if (!profilesCollection) {
         throw new DatabaseError("Collection not initialized");
@@ -208,7 +208,7 @@ async function updateOneProfile(username: string, newProfile: Profile): Promise<
         throw new DatabaseError("Collection not initialized");
     }
     if (!(await validateUtils.isValidProfile(newProfile.email, newProfile.username, newProfile.emailReminderPreference))) {
-        throw new InvalidInputError(`Invalid profile update (${newProfile.email}, ${newProfile.emailReminderPreference})`)
+        throw new InvalidInputError(`Invalid profile update`)
     }
     try {
         const result = await profilesCollection.updateOne({username}, { $set: newProfile});
