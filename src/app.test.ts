@@ -8,7 +8,6 @@ import supertest from "supertest";
 const testRequest = supertest(app); 
 import { routeRoot } from "./controllers/profileController.js";
 import { ObjectId } from "mongodb";
-import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
 const dbName = "user_db_test";
 
 
