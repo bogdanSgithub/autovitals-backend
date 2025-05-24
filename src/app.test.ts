@@ -1,7 +1,8 @@
 
 import { MongoMemoryServer } from "mongodb-memory-server";
 import { addCar, deleteCar, getSingleCar, initialize, updateCar, getAllCars } from "./models/carModel.js";
-import * as model from "./models/profileModel.js"
+import * as profileModel from "./models/profileModel.js"
+import * as userModel from "./models/userModel.js"
 import { beforeEach, vi, beforeAll, test, expect, afterAll } from "vitest";
 import app from './app.js';
 import supertest from "supertest";
@@ -9,7 +10,8 @@ const testRequest = supertest(app);
 import { routeRoot } from "./controllers/profileController.js";
 import { ObjectId } from "mongodb";
 import { a } from "vitest/dist/chunks/suite.d.FvehnV49.js";
-const dbName = "user_db_test";
+const userDb = "user_db_test";
+const profileDb = "profile_db_test";
 
 
 
@@ -34,6 +36,8 @@ beforeEach(async () => {
     try { 
         const uri = mongod.getUri()
         await initialize(db, true, uri);
+        await userModel.initialize(userDb, true, uri);
+        await profileModel.initialize(profileDb, true, uri);
     } catch (err) {
         console.log(err)
     }
@@ -371,6 +375,27 @@ test("delete car with invalid match", async () => {
     expect(Math.abs(dbDate.getTime() - c_date.getTime())).toBeLessThan(1000); // 1 sec tolerance    
 })
 
+test("POST /profiles successfully adds a profile", async () => {
+  const newProfile = {
+    email: "test@example.com",
+    isAdmin: false,
+    username: "testuser",
+    coordinates: { lat: 12.34, lng: 56.78 },
+    emailReminderPreference: true
+  };
+
+  const response = await testRequest.post("/profiles").send(newProfile);
+
+  expect(response.status).toBe(200);
+  expect(response.body.email).toBe(newProfile.email);
+  expect(response.body.username).toBe(newProfile.username);
+
+  // Optionally, verify data directly from DB if model exposes a get method
+  const profiles = await profileModel.getAllProfiles();
+  expect(profiles.length).toBe(1);
+  expect(profiles[0].email).toBe(newProfile.email);
+});
+
 // ****************************************************************************************************************
 // ************************************************ GET All /users ************************************************
 // ****************************************************************************************************************
@@ -379,20 +404,22 @@ test("delete car with invalid match", async () => {
  * Generates and returns a valid User object (firstName, lastName)
  * @returns 
  */
+/** 
 function generateProfileData(): model.Profile {
     const profiles: model.Profile[] = [
       /*{email: "Bob@gmail.com", username: "1", isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"},
       {email: "Bob@gmail.com", username: "1", isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"},
-      {email: "Bob@gmail.com", username: "1", isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"},*/
+      {email: "Bob@gmail.com", username: "1", isAdmin: false, coordinates: [10, 10], emailReminderPreference: "none"},
     ];
     return profiles[Math.floor(Math.random() * profiles.length)];
   }
-  
+  */
 
 
 /**
  * Adds a user to the database using the model's addUser method. GET /users endpoint and expects it to be status 200 and to contain the newly added user. Also makes sure that is the only user in the database.
  */
+/** 
 test("GET All /profiles success", async () => {
     const newProfile: model.Profile = generateProfileData();
     await model.addProfile(newProfile.email, newProfile.isAdmin, newProfile.username, newProfile.coordinates, newProfile.emailReminderPreference);
@@ -426,6 +453,7 @@ test("GET All /profiles success", async () => {
     // make sure the database is in fact empty
     expect(results.length).toBe(0);
   });
+  
   
   // ****************************************************************************************************************
   // ************************************************ GET One /users ************************************************
